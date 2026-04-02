@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MEDSPORT R&D - Voice Fixed</title>
+    <title>MEDSPORT R&D - Azerbaijan Voice Fixed</title>
     <style>
+        /* Весь твой дизайн из manual5.html без изменений */
         :root { --primary: #e94560; --bg: #1a1a2e; --accent: #ffd700; --slot-bg: rgba(255,255,255,0.1); --panel-bg: rgba(255,255,255,0.05); }
         body { margin: 0; background: var(--bg); color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; touch-action: none; user-select: none; }
         #start-screen { position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
@@ -78,31 +79,44 @@
         const synth = window.speechSynthesis;
         let voices = [];
 
-        // Обновляем список голосов принудительно для Chrome
         const loadVoices = () => { voices = synth.getVoices(); };
-        loadVoices();
         if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+        loadVoices();
 
         const data = {
-            'ru': { letters: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), digits: "0123456789".split(''), code: 'ru-RU' },
-            'az': { letters: "ABCÇDEƏFGĞHXIİJKQLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'az-AZ' },
-            'tr': { letters: "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'tr-TR' },
-            'en': { letters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(''), digits: "0123456789".split(''), code: 'en-US' }
+            'ru': { letters: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), digits: "0123456789".split(''), code: 'ru-RU', tts: 'ru' },
+            'az': { letters: "ABCÇDEƏFGĞHXIİJKQLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'az-AZ', tts: 'az' },
+            'tr': { letters: "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'tr-TR', tts: 'tr' },
+            'en': { letters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(''), digits: "0123456789".split(''), code: 'en-US', tts: 'en' }
         };
 
         function speak(text) {
-            if (!text) return;
+            if (!text || text === " ") return;
             synth.cancel();
-            const ut = new SpeechSynthesisUtterance(text);
-            
-            // Умный подбор голоса
-            const targetLang = currentLang.split('-')[0].toLowerCase();
-            const voice = voices.find(v => v.lang.toLowerCase().includes(targetLang)) || voices.find(v => v.default);
-            
-            if (voice) ut.voice = voice;
-            ut.lang = currentLang;
-            ut.rate = speechRate;
-            synth.speak(ut);
+
+            // 1. Пытаемся найти системный голос
+            const targetLang = currentLang.toLowerCase();
+            const voice = voices.find(v => v.lang.toLowerCase() === targetLang || v.lang.toLowerCase().startsWith(targetLang.split('-')[0]));
+
+            if (voice) {
+                // Если голос найден (как для RU/EN), используем стандартный API
+                const ut = new SpeechSynthesisUtterance(text);
+                ut.voice = voice;
+                ut.lang = currentLang;
+                ut.rate = speechRate;
+                synth.speak(ut);
+            } else {
+                // 2. Если голос НЕ найден (как часто бывает с AZ), грузим из сети напрямую
+                const ttsLang = currentLang.split('-')[0];
+                const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${ttsLang}&client=tw-ob&ttsspeed=${speechRate * 5}`;
+                const audio = new Audio(url);
+                audio.play().catch(() => {
+                    // Если Audio заблокировано, пробуем хотя бы системный по умолчанию
+                    const fallbackUt = new SpeechSynthesisUtterance(text);
+                    fallbackUt.lang = currentLang;
+                    synth.speak(fallbackUt);
+                });
+            }
         }
 
         document.getElementById('global-speed').oninput = (e) => {
@@ -117,7 +131,10 @@
             controlsPanel.style.display = 'flex';
             document.getElementById('read-all-btn').textContent = langKey === 'ru' ? 'ПРОЧИТАТЬ' : (langKey === 'az' ? 'OXUMAQ' : (langKey === 'tr' ? 'OKU' : 'READ ALL'));
             
-            speak(" "); // Активация звука кликом
+            // Разблокировка звука
+            const silent = new SpeechSynthesisUtterance(" ");
+            synth.speak(silent);
+
             setupSlots(); layoutPerimeter(data[langKey]); startCamera(); 
         }
 
