@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <title>MEDSPORT R&D Nature</title>
+    <style>
+        :root { --primary: #e94560; --bg: #1a1a2e; --accent: #ffd700; --slot-bg: rgba(255,255,255,0.1); --panel-bg: rgba(255,255,255,0.05); }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; touch-action: none; user-select: none; }
+        
+        /* Экран запуска */
+        #start-screen { position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
+        .logo-img { width: 180px; height: auto; margin-bottom: 20px; border-radius: 20px; }
+        .logo-text { font-size: 50px; font-weight: 900; color: var(--primary); margin-bottom: 30px; letter-spacing: 5px; }
+        
+        .lang-btns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 30px; }
+        .lang-btn { width: 160px; height: 70px; border: 2px solid rgba(255,255,255,0.2); background: var(--panel-bg); cursor: pointer; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        .lang-btn span { font-size: 16px; font-weight: 600; color: #fff; pointer-events: none; }
+        .lang-btn:active, .lang-btn.hovered { border-color: var(--primary); background: rgba(233, 69, 96, 0.2); }
+
+        /* Игровое поле */
+        #v-container { position: absolute; bottom: 15px; left: 15px; width: 100px; height: 75px; opacity: 0.4; z-index: 1001; border-radius: 10px; overflow: hidden; border: 1px solid #fff; }
+        video { width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
+
+        .char-item { position: absolute; width: 65px; height: 65px; background: #30336b; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 32px; color: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transform: translate(-50%, -50%); border: 2px solid transparent; cursor: grab; z-index: 100; transition: transform 0.1s; }
+        .char-item.hovered { border-color: var(--accent); background: #4834d4; transform: translate(-50%, -50%) scale(1.1); }
+        
+        #slots-container { position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 10px; width: 90%; justify-content: center; z-index: 50; }
+        .slot { width: 70px; height: 90px; background: var(--slot-bg); border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 45px; font-weight: 900; color: #4CAF50; transition: 0.3s; }
+        .slot.has-char { border-style: solid; border-color: #4CAF50; background: rgba(76, 175, 80, 0.1); }
+        
+        #controls-panel { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: none; align-items: center; gap: 25px; z-index: 200; }
+        #read-all-btn { padding: 18px 45px; background: var(--primary); border: none; color: #fff; border-radius: 50px; font-weight: 900; font-size: 22px; cursor: pointer; box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4); }
+        .control-icon { width: 65px; height: 65px; background: #535c68; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; border: 2px solid rgba(255,255,255,0.2); }
+
+        #cursor { position: absolute; width: 35px; height: 35px; border: 3px solid #fff; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); z-index: 10000; opacity: 0; box-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        .dragging { pointer-events: none; z-index: 1000; position: absolute; opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <img src="logo.jpg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
+        <div class="logo-text">MEDSPORT</div>
+        <div class="lang-btns">
+            <div class="lang-btn" id="btn-az"><span>AZƏRBAYCAN</span></div>
+            <div class="lang-btn" id="btn-ru"><span>РУССКИЙ</span></div>
+            <div class="lang-btn" id="btn-tr"><span>TÜRKÇE</span></div>
+            <div class="lang-btn" id="btn-en"><span>ENGLISH</span></div>
+        </div>
+    </div>
+
+    <div id="v-container"><video id="input_video" playsinline></video></div>
+    <div id="perimeter-container"></div>
+    <div id="slots-container"></div>
+    
+    <div id="controls-panel">
+        <div id="lang-switch-icon" class="control-icon">🌐</div>
+        <button id="read-all-btn">READ ALL</button>
+        <div id="trash-can" class="control-icon">🗑️</div>
+    </div>
+
+    <div id="cursor"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+    <script>
+        const perimeter = document.getElementById('perimeter-container'),
+              slotsContainer = document.getElementById('slots-container'),
+              controlsPanel = document.getElementById('controls-panel'),
+              startScreen = document.getElementById('start-screen'),
+              cursor = document.getElementById('cursor');
+
+        let currentLang = 'ru-RU', isAppActive = false, activeObj = null, isGrab = false;
+        let curX = 0, curY = 0, lastHovered = null, lastY = 0;
+        const synth = window.speechSynthesis;
+
+        const data = {
+            'ru': { letters: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), code: 'ru-RU' },
+            'az': { letters: "ABCÇDEƏFGĞHXIİJKQLMNOÖPRSŞTUÜVYZ".split(''), code: 'az-AZ' },
+            'tr': { letters: "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split(''), code: 'tr-TR' },
+            'en': { letters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(''), code: 'en-US' }
+        };
+
+        // Улучшенная озвучка
+        function speak(text) {
+            if (!text) return;
+            synth.cancel(); // Прерываем предыдущую речь для мгновенного отклика
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = currentLang;
+            utterance.rate = 0.85;
+            synth.speak(utterance);
+        }
+
+        function initSystem(langKey) {
+            currentLang = data[langKey].code;
+            isAppActive = true;
+            startScreen.style.display = 'none';
+            controlsPanel.style.display = 'flex';
+            
+            const readBtnText = { 'ru': 'ПРОЧИТАТЬ', 'az': 'OXUMAQ', 'tr': 'OKU', 'en': 'READ ALL' };
+            document.getElementById('read-all-btn').textContent = readBtnText[langKey];
+            
+            setupSlots(); 
+            layoutLetters(data[langKey].letters);
+            speak(langKey === 'az' ? "Sistem hazırdır" : "Система готова");
+        }
+
+        function returnToMenu() {
+            isAppActive = false;
+            startScreen.style.display = 'flex';
+            controlsPanel.style.display = 'none';
+            perimeter.innerHTML = ''; 
+            slotsContainer.innerHTML = '';
+        }
+
+        // Слушатели кнопок
+        document.getElementById('btn-az').onclick = () => initSystem('az');
+        document.getElementById('btn-ru').onclick = () => initSystem('ru');
+        document.getElementById('btn-tr').onclick = () => initSystem('tr');
+        document.getElementById('btn-en').onclick = () => initSystem('en');
+        document.getElementById('read-all-btn').onclick = () => readFullWord();
+        document.getElementById('trash-can').onclick = () => setupSlots();
+        document.getElementById('lang-switch-icon').onclick = () => returnToMenu();
+
+        function setupSlots() {
+            slotsContainer.innerHTML = '';
+            for(let i=0; i<8; i++) {
+                const s = document.createElement('div'); s.className = 'slot'; s.innerHTML = '<span></span>';
+                slotsContainer.appendChild(s);
+            }
+        }
+
+        function layoutLetters(letters) {
+            perimeter.innerHTML = '';
+            const pad = 70, w = window.innerWidth, h = window.innerHeight;
+            const half = Math.ceil(letters.length / 2);
+            
+            letters.slice(0, half).forEach((c, i) => createLetterEl(c, pad + (i*(w-2*pad)/(half-1)), pad + 10));
+            letters.slice(half).forEach((c, i) => createLetterEl(c, pad + (i*(w-2*pad)/(letters.length-half-1)), h - pad - 20));
+        }
+
+        function createLetterEl(char, x, y) {
+            const el = document.createElement('div');
+            el.className = 'char-item';
+            el.textContent = char;
+            el.style.left = x+'px';
+            el.style.top = y+'px';
+            
+            const onStart = (e) => { if(!isGrab) startDrag(char); };
+            el.onmousedown = onStart;
+            el.ontouchstart = onStart;
+            perimeter.appendChild(el);
+        }
+
+        function startDrag(c) { 
+            isGrab = true;
+            speak(c); 
+            activeObj = document.createElement('div'); 
+            activeObj.className = 'char-item dragging'; 
+            activeObj.textContent = c; 
+            activeObj.style.left = curX + 'px';
+            activeObj.style.top = curY + 'px';
+            document.body.appendChild(activeObj);
+        }
+
+        function readFullWord() {
+            let word = "";
+            document.querySelectorAll('.slot span').forEach(s => {
+                if (s.textContent.trim() !== "") word += s.textContent;
+            });
+            if(word) speak(word); 
+        }
+
+        function handleGlobalMove(x, y) {
+            curX = x; curY = y;
+            if(activeObj) {
+                activeObj.style.left = curX + 'px';
+                activeObj.style.top = curY + 'px';
+            }
+            checkHovers(curX, curY);
+            if (!isGrab && isAppActive) handleErase(curX, curY);
+            lastY = curY;
+        }
+
+        function handleGlobalRelease() {
+            if (isGrab && activeObj) {
+                const slots = document.querySelectorAll('.slot');
+                let placed = false;
+                slots.forEach((s) => {
+                    const r = s.getBoundingClientRect();
+                    if (curX > r.left && curX < r.right && curY > r.top && curY < r.bottom) {
+                        const span = s.querySelector('span');
+                        span.textContent = activeObj.textContent; 
+                        s.classList.add('has-char'); 
+                        speak(activeObj.textContent);
+                        placed = true;
+                    }
+                });
+                activeObj.remove();
+            }
+            isGrab = false; activeObj = null;
+        }
+
+        // Мышь и тач
+        window.onmousemove = (e) => handleGlobalMove(e.clientX, e.clientY);
+        window.onmouseup = () => handleGlobalRelease();
+        window.ontouchmove = (e) => handleGlobalMove(e.touches[0].clientX, e.touches[0].clientY);
+        window.ontouchend = () => handleGlobalRelease();
+
+        function checkHovers(x, y) {
+            const el = document.elementFromPoint(x, y);
+            if (el && el.classList.contains('char-item')) {
+                if (lastHovered !== el) {
+                    if (lastHovered) lastHovered.classList.remove('hovered');
+                    el.classList.add('hovered');
+                    lastHovered = el;
+                }
+            } else {
+                if (lastHovered) lastHovered.classList.remove('hovered');
+                lastHovered = null;
+            }
+        }
+
+        function handleErase(x, y) {
+            if (Math.abs(y - lastY) < 30) return; 
+            document.querySelectorAll('.slot').forEach((s) => {
+                const r = s.getBoundingClientRect(), span = s.querySelector('span');
+                if (span && span.textContent !== "" && x > r.left && x < r.right && y > r.top && y < r.bottom) {
+                    span.textContent = ""; s.classList.remove('has-char');
+                }
+            });
+        }
+
+        // Настройка камеры и жестов
+        const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+        hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7 });
+        
+        hands.onResults(res => {
+            if (res.multiHandLandmarks && res.multiHandLandmarks[0]) {
+                const p = res.multiHandLandmarks[0];
+                // Инвертируем X, так как видео зеркальное
+                let mX = Math.max(0, Math.min(1, ((1 - p[9].x) - 0.2) / 0.6));
+                let mY = Math.max(0, Math.min(1, (p[9].y - 0.2) / 0.6));
+                
+                curX += (mX * window.innerWidth - curX) * 0.4;
+                curY += (mY * window.innerHeight - curY) * 0.4;
+                
+                cursor.style.left = curX + 'px';
+                cursor.style.top = curY + 'px';
+                cursor.style.opacity = 1;
+
+                const isFist = p[8].y > p[6].y && p[12].y > p[10].y;
+                if (isFist) {
+                    if (!isGrab) {
+                        const el = document.elementFromPoint(curX, curY);
+                        if (el) {
+                            if (el.classList.contains('char-item')) startDrag(el.textContent);
+                            else if (el.id.startsWith('btn-')) el.click();
+                            else if (el.id === 'read-all-btn' || el.id === 'trash-can') el.click();
+                        }
+                        isGrab = true;
+                    }
+                } else { if (isGrab) handleGlobalRelease(); isGrab = false; }
+                handleGlobalMove(curX, curY);
+            } else cursor.style.opacity = 0;
+        });
+
+        const video = document.getElementById('input_video');
+        const cam = new Camera(video, { onFrame: async () => { await hands.send({image: video}); }, width: 640, height: 480 });
+        cam.start();
+
+        // Регистрация PWA Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
