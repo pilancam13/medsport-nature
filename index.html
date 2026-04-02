@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MEDSPORT R&D - Final Voice Fix</title>
+    <title>MEDSPORT R&D - Azerbaijan Phonetic Fix</title>
     <style>
         :root { --primary: #e94560; --bg: #1a1a2e; --accent: #ffd700; --slot-bg: rgba(255,255,255,0.1); --panel-bg: rgba(255,255,255,0.05); }
         body { margin: 0; background: var(--bg); color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; touch-action: none; user-select: none; }
@@ -76,32 +76,42 @@
         let lastPlanetClickTime = 0, speechRate = 0.8;
 
         const data = {
-            'ru': { letters: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), digits: "0123456789".split(''), code: 'ru-RU', tts: 'ru' },
-            'az': { letters: "ABCÇDEƏFGĞHXIİJKQLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'az-AZ', tts: 'tr' }, // Используем турецкий движок как базу для AZ если нет родного
-            'tr': { letters: "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'tr-TR', tts: 'tr' },
-            'en': { letters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(''), digits: "0123456789".split(''), code: 'en-US', tts: 'en' }
+            'ru': { letters: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), digits: "0123456789".split(''), code: 'ru-RU' },
+            'az': { letters: "ABCÇDEƏFGĞHXIİJKQLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'az-AZ' },
+            'tr': { letters: "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'tr-TR' },
+            'en': { letters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(''), digits: "0123456789".split(''), code: 'en-US' }
         };
 
-        // Специальная функция озвучки для специфических букв
+        // Карта фонетической коррекции для вредных символов
+        const phoneticMap = { 'Ə': 'e', 'ə': 'e', 'Ğ': 'g', 'ğ': 'g', 'I': 'i', 'ı': 'i', 'Ş': 'sh', 'ş': 'sh' };
+
         function speak(text) {
             if (!text || text === " ") return;
             window.speechSynthesis.cancel();
+
+            let processedText = text;
+            // Если это азербайджанский, помогаем движку понять специфические буквы
+            if (currentLang.startsWith('az')) {
+                processedText = text.split('').map(char => phoneticMap[char] || char).join('');
+            }
+
+            const ttsLang = currentLang.split('-')[0];
+            // Используем client=tw-ob и принудительное кодирование
+            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(processedText)}&tl=${ttsLang}&client=tw-ob&ttsspeed=${Math.round(speechRate * 5)}`;
             
-            let ttsLang = data[Object.keys(data).find(k => data[k].code === currentLang)].tts;
+            const audio = new Audio();
+            audio.src = url;
             
-            // ФОРСИРОВАННАЯ ОЗВУЧКА ЧЕРЕЗ СЕТЕВОЙ API (Google)
-            // Добавляем параметр tl=az или tl=tr. Для азербайджанского Google TTS понимает 'az'.
-            let targetTl = currentLang.split('-')[0];
-            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text.toLowerCase())}&tl=${targetTl}&client=tw-ob&ttsspeed=${speechRate * 5}`;
-            
-            const audio = new Audio(url);
-            audio.play().catch(() => {
-                // Резерв на случай блокировки аудио
-                const ut = new SpeechSynthesisUtterance(text);
-                ut.lang = currentLang;
-                ut.rate = speechRate;
-                window.speechSynthesis.speak(ut);
-            });
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    // Fallback на системный голос если сеть легла или заблокирована
+                    const ut = new SpeechSynthesisUtterance(text);
+                    ut.lang = currentLang;
+                    ut.rate = speechRate;
+                    window.speechSynthesis.speak(ut);
+                });
+            }
         }
 
         document.getElementById('global-speed').oninput = (e) => {
