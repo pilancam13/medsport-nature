@@ -3,74 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
-    <title>MEDSPORT R&D</title>
+    <title>MEDSPORT R&D Nature</title>
     <style>
-        :root { --primary: #e94560; --bg: #1a1a2e; }
-        body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        :root { --primary: #e94560; --bg: #1a1a2e; --slot-bg: rgba(255,255,255,0.05); }
+        body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; user-select: none; }
         
-        /* Экран выбора - 4 пункта */
+        /* Экран выбора */
         #start-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
-        .logo-img { width: 140px; border-radius: 15px; margin-bottom: 20px; }
-        .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .l-btn { width: 140px; padding: 15px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; color: #fff; cursor: pointer; font-weight: bold; }
+        .logo-img { width: clamp(100px, 15vw, 180px); border-radius: 20px; margin-bottom: 20px; }
+        .logo-text { font-size: clamp(24px, 5vw, 40px); font-weight: 900; color: var(--primary); margin-bottom: 30px; letter-spacing: 2px; }
+        .lang-btns { display: flex; gap: 20px; }
+        .l-btn { padding: clamp(10px, 2vh, 20px) clamp(20px, 4vw, 40px); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: #fff; cursor: pointer; font-weight: bold; font-size: clamp(14px, 2vh, 18px); }
 
-        /* Цифры по бокам */
-        .side-num { position: absolute; width: 50px; height: 50px; background: #2c3e50; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; color: #f1c40f; border: 2px solid #f39c12; pointer-events: auto; }
-        .left-num { left: 20px; }
-        .right-num { right: 20px; }
+        /* Игровой интерфейс */
+        #v-container { position: absolute; top: 10px; right: 10px; width: clamp(80px, 15vw, 150px); height: clamp(60px, 12vw, 110px); border-radius: 12px; overflow: hidden; border: 2px solid #fff; opacity: 0.6; z-index: 1000; }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
-        /* Контейнер букв */
-        #letters-area { position: absolute; inset: 0; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
-        .row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; pointer-events: auto; }
-        .char-item { width: 55px; height: 55px; background: #30336b; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 28px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        #perimeter { position: absolute; inset: 0; padding: clamp(10px, 3vh, 30px); display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+        .row { display: flex; flex-wrap: wrap; justify-content: center; gap: clamp(5px, 1vw, 15px); pointer-events: auto; }
+        
+        .char-item { 
+            width: clamp(35px, 6vw, 70px); height: clamp(35px, 6vw, 70px); 
+            background: #30336b; border-radius: 10px; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: 900; font-size: clamp(18px, 3vw, 35px); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); cursor: grab; 
+        }
+
+        /* Желтые круги цифр (боковые панели) */
+        .side-panel { position: absolute; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 15px; }
+        #left-panel { left: clamp(10px, 3vw, 30px); }
+        #right-panel { right: clamp(10px, 3vw, 30px); }
+        .digit-item {
+            width: clamp(30px, 5vw, 60px); height: clamp(30px, 5vw, 60px);
+            background: rgba(255, 215, 0, 0.1); border: 2px solid #ffd700; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: clamp(16px, 2.5vw, 28px); color: #ffd700; cursor: pointer;
+        }
 
         /* Слоты */
-        #slots-container { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-wrap: wrap; gap: 8px; width: 85%; justify-content: center; }
-        .slot { width: 60px; height: 80px; background: rgba(255,255,255,0.05); border: 2px dashed rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 35px; color: #4CAF50; }
+        #slots-container { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-wrap: wrap; gap: clamp(5px, 1vw, 15px); justify-content: center; width: 85%; }
+        .slot { 
+            width: clamp(35px, 7vw, 75px); height: clamp(50px, 10vh, 100px); 
+            background: var(--slot-bg); border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: clamp(24px, 5vw, 50px); color: #4CAF50; font-weight: 900;
+        }
+        
+        /* Управление */
+        #controls { position: absolute; bottom: clamp(20px, 5vh, 40px); width: 100%; display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 2000; }
+        #read-btn { padding: 15px clamp(20px, 5vw, 50px); background: var(--primary); border: none; color: #fff; border-radius: 40px; font-weight: 900; font-size: clamp(16px, 2.5vw, 24px); cursor: pointer; }
+        .circle-btn { width: clamp(40px, 6vw, 65px); height: clamp(40px, 6vw, 65px); background: #535c68; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: clamp(20px, 3vw, 30px); cursor: pointer; }
 
-        /* Панель */
-        #controls { position: absolute; bottom: 25px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 2000; }
-        #read-btn { padding: 15px 40px; background: var(--primary); border: none; color: #fff; border-radius: 40px; font-weight: 900; font-size: 20px; }
-        .circle-btn { width: 55px; height: 55px; background: #535c68; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
-
-        #v-container { position: absolute; top: 10px; right: 10px; width: 90px; height: 65px; border-radius: 10px; overflow: hidden; border: 1px solid #fff; opacity: 0.4; }
-        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        .dragging { position: absolute; z-index: 5000; pointer-events: none; opacity: 0.8; transform: scale(1.2); }
+        .dragging { position: absolute; z-index: 5000; pointer-events: none; opacity: 0.8; transform: scale(1.1); }
     </style>
 </head>
 <body>
     <div id="start-screen">
         <img src="logo.jpg" class="logo-img" onerror="this.style.display='none'">
-        <div style="font-size: 28px; font-weight: 900; color: var(--primary); margin-bottom: 25px;">MEDSPORT</div>
-        <div class="lang-grid">
+        <div class="logo-text">MEDSPORT</div>
+        <div class="lang-btns">
             <button class="l-btn" onclick="initApp('az')">AZƏRBAYCAN</button>
             <button class="l-btn" onclick="initApp('ru')">РУССКИЙ</button>
-            <button class="l-btn" onclick="initApp('tr')">TÜRKÇE</button>
-            <button class="l-btn" onclick="initApp('en')">ENGLISH</button>
         </div>
     </div>
 
     <div id="v-container"><video id="input_video" playsinline></video></div>
     
-    <div class="side-num left-num" style="top: 150px;" onclick="speak('1')">1</div>
-    <div class="side-num left-num" style="top: 220px;" onclick="speak('2')">2</div>
-    <div class="side-num left-num" style="top: 290px;" onclick="speak('3')">3</div>
-    <div class="side-num left-num" style="top: 360px;" onclick="speak('4')">4</div>
-
-    <div class="side-num right-num" style="top: 150px;" onclick="speak('5')">5</div>
-    <div class="side-num right-num" style="top: 220px;" onclick="speak('6')">6</div>
-    <div class="side-num right-num" style="top: 290px;" onclick="speak('7')">7</div>
-    <div class="side-num right-num" style="top: 360px;" onclick="speak('8')">8</div>
-
-    <div id="letters-area">
+    <div id="perimeter">
         <div id="top-row" class="row"></div>
         <div id="bottom-row" class="row"></div>
     </div>
+    
+    <div id="left-panel" class="side-panel"></div>
+    <div id="right-panel" class="side-panel"></div>
+
     <div id="slots-container"></div>
     <div id="controls" style="display: none;">
         <div class="circle-btn" onclick="location.reload()">🌐</div>
-        <button id="read-btn" onclick="readAll()">ПРОЧИТАТЬ</button>
+        <button id="read-btn" onclick="readAll()"></button>
         <div class="circle-btn" onclick="clearSlots()">🗑️</div>
     </div>
 
@@ -79,36 +92,61 @@
     <script>
         const data = {
             'az': { l: "ABCÇDEƏFGĞHXIİJKQLMNOÖPRSŞTUÜVYZ".split(''), c: 'az-AZ', b: 'OXUMAQ' },
-            'ru': { l: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), c: 'ru-RU', b: 'ПРОЧИТАТЬ' },
-            'tr': { l: "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split(''), c: 'tr-TR', b: 'OKU' },
-            'en': { l: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(''), c: 'en-US', b: 'READ' }
+            'ru': { l: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), c: 'ru-RU', b: 'ПРОЧИТАТЬ' }
         };
         let currentLang = 'ru-RU', activeObj = null, isDragging = false;
         const synth = window.speechSynthesis;
+
+        async function initCamera() {
+            const video = document.getElementById('input_video');
+            const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+            hands.setOptions({ maxNumHands: 1, minDetectionConfidence: 0.7 });
+            
+            // Сначала подключаем логику распознавания
+            hands.onResults(res => {}); // Пока пустая заглушка
+
+            const cam = new Camera(video, {
+                onFrame: async () => { await hands.send({image: video}); },
+                width: 640, height: 480
+            });
+            return cam.start(); // Запускаем камеру ТОЛЬКО после настройки
+        }
 
         function initApp(lang) {
             currentLang = data[lang].c;
             document.getElementById('read-btn').textContent = data[lang].b;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('controls').style.display = 'flex';
+            
+            // Камера
+            initCamera().catch(() => alert("Камера недоступна"));
+
+            // Слоты
             const sc = document.getElementById('slots-container');
             sc.innerHTML = '';
             for(let i=0; i<8; i++) sc.innerHTML += '<div class="slot"><span></span></div>';
+
+            // Буквы
             const letters = data[lang].l;
             const mid = Math.ceil(letters.length / 2);
             renderRow('top-row', letters.slice(0, mid));
             renderRow('bottom-row', letters.slice(mid));
+
+            // Цифры (возвращаем желтые панели)
+            const lp = document.getElementById('left-panel'); lp.innerHTML = '';
+            "1234".split('').forEach(n => lp.innerHTML += `<div class="digit-item" onclick="speak('${n}')">${n}</div>`);
+            const rp = document.getElementById('right-panel'); rp.innerHTML = '';
+            "5678".split('').forEach(n => rp.innerHTML += `<div class="digit-item" onclick="speak('${n}')">${n}</div>`);
         }
 
         function renderRow(id, chars) {
-            const row = document.getElementById(id);
-            row.innerHTML = '';
+            const row = document.getElementById(id); row.innerHTML = '';
             chars.forEach(c => {
                 const div = document.createElement('div');
                 div.className = 'char-item';
                 div.textContent = c;
-                div.ontouchstart = (e) => startDrag(e.touches[0].clientX, e.touches[0].clientY, c);
                 div.onmousedown = (e) => startDrag(e.clientX, e.clientY, c);
+                div.ontouchstart = (e) => startDrag(e.touches[0].clientX, e.touches[0].clientY, c);
                 row.appendChild(div);
             });
         }
@@ -119,18 +157,13 @@
             activeObj = document.createElement('div');
             activeObj.className = 'char-item dragging';
             activeObj.textContent = c;
-            activeObj.style.left = (x - 25) + 'px';
-            activeObj.style.top = (y - 25) + 'px';
+            activeObj.style.left = (x - 20) + 'px'; activeObj.style.top = (y - 20) + 'px';
             document.body.appendChild(activeObj);
         }
 
         window.onmousemove = (e) => { if(isDragging) move(e.clientX, e.clientY); };
         window.ontouchmove = (e) => { if(isDragging) move(e.touches[0].clientX, e.touches[0].clientY); };
-
-        function move(x, y) {
-            activeObj.style.left = (x - 25) + 'px';
-            activeObj.style.top = (y - 25) + 'px';
-        }
+        function move(x, y) { activeObj.style.left = (x - 20) + 'px'; activeObj.style.top = (y - 20) + 'px'; }
 
         window.onmouseup = (e) => endDrag(e.clientX, e.clientY);
         window.ontouchend = (e) => endDrag(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
@@ -144,34 +177,17 @@
                     speak(activeObj.textContent);
                 }
             });
-            activeObj.remove();
-            isDragging = false;
+            activeObj.remove(); isDragging = false;
         }
 
         function readAll() {
-            let word = "";
-            document.querySelectorAll('.slot span').forEach(s => word += s.textContent);
+            let word = ""; document.querySelectorAll('.slot span').forEach(s => word += s.textContent);
             speak(word);
         }
 
-        function clearSlots() {
-            document.querySelectorAll('.slot span').forEach(s => s.textContent = "");
-        }
+        function clearSlots() { document.querySelectorAll('.slot span').forEach(s => s.textContent = ""); }
 
-        function speak(t) {
-            synth.cancel();
-            const u = new SpeechSynthesisUtterance(t);
-            u.lang = currentLang;
-            synth.speak(u);
-        }
-
-        const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-        hands.setOptions({ maxNumHands: 1, minDetectionConfidence: 0.7 });
-        const cam = new Camera(document.getElementById('input_video'), {
-            onFrame: async () => { await hands.send({image: document.getElementById('input_video')}); },
-            width: 640, height: 480
-        });
-        cam.start();
+        function speak(t) { synth.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = currentLang; synth.speak(u); }
     </script>
 </body>
 </html>
