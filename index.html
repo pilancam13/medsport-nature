@@ -84,21 +84,25 @@
               startScreen = document.getElementById('start-screen'),
               cursor = document.getElementById('cursor');
 
-        let currentLang = 'ru', isAppActive = false, activeObj = null, isGrab = false, curX = 0, curY = 0, lastHovered = null, lastY = 0, erasePower = {};
+        let currentLang = 'ru-RU', isAppActive = false, activeObj = null, isGrab = false, curX = 0, curY = 0, lastHovered = null, lastY = 0, erasePower = {};
         let lastPlanetClickTime = 0, speechRate = 0.8;
 
+        const synth = window.speechSynthesis;
+
         const data = {
-            'ru': { letters: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), digits: "0123456789".split(''), code: 'ru' },
-            'az': { letters: "ABCÇDEƏFGĞHXIİJKQLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'az' },
-            'tr': { letters: "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'tr' },
-            'en': { letters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(''), digits: "0123456789".split(''), code: 'en' }
+            'ru': { letters: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), digits: "0123456789".split(''), code: 'ru-RU' },
+            'az': { letters: "ABCÇDEƏFGĞHXIİJKQLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'az-AZ' },
+            'tr': { letters: "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split(''), digits: "0123456789".split(''), code: 'tr-TR' },
+            'en': { letters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(''), digits: "0123456789".split(''), code: 'en-US' }
         };
 
         function speak(text) {
             if (!text) return;
-            const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${currentLang}&client=tw-ob&ttsspeed=${speechRate * 5}`;
-            const audio = new Audio(url);
-            audio.play().catch(e => console.warn("Audio play blocked"));
+            synth.cancel(); // Остановить текущую речь
+            const ut = new SpeechSynthesisUtterance(text);
+            ut.lang = currentLang;
+            ut.rate = speechRate;
+            synth.speak(ut);
         }
 
         document.getElementById('global-speed').oninput = (e) => {
@@ -112,6 +116,10 @@
             startScreen.style.display = 'none';
             controlsPanel.style.display = 'flex';
             document.getElementById('read-all-btn').textContent = langKey === 'ru' ? 'ПРОЧИТАТЬ' : (langKey === 'az' ? 'OXUMAQ' : (langKey === 'tr' ? 'OKU' : 'READ ALL'));
+            
+            // Разблокировка аудио через "пустое" высказывание
+            speak(""); 
+
             setupSlots(); 
             layoutPerimeter(data[langKey]);
             startCamera(); 
@@ -129,7 +137,7 @@
         document.getElementById('btn-en').onclick = () => initSystem('en');
         document.getElementById('btn-ru').onclick = () => initSystem('ru');
         document.getElementById('read-all-btn').onclick = () => readFullWord();
-        document.getElementById('trash-can').onclick = () => setupSlots();
+        document.getElementById('trash-can').onclick = () => { speak(""); setupSlots(); };
         document.getElementById('lang-switch-icon').onclick = () => {
             const now = Date.now();
             if (now - lastPlanetClickTime < 600) returnToMenu();
@@ -163,7 +171,8 @@
         }
 
         function startDrag(c) { 
-            isGrab = true; speak(c); 
+            isGrab = true; 
+            speak(c); 
             activeObj = document.createElement('div'); 
             activeObj.className = 'char-item dragging'; 
             activeObj.textContent = c; 
@@ -195,7 +204,11 @@
                     const r = s.getBoundingClientRect();
                     if (curX > r.left && curX < r.right && curY > r.top && curY < r.bottom) {
                         const span = s.querySelector('span');
-                        if (span.textContent === "") { span.textContent = activeObj.textContent; s.classList.add('has-char'); speak(activeObj.textContent); }
+                        if (span.textContent === "") { 
+                            span.textContent = activeObj.textContent; 
+                            s.classList.add('has-char'); 
+                            speak(activeObj.textContent); 
+                        }
                     }
                 });
                 activeObj.remove();
