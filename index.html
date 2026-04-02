@@ -102,14 +102,13 @@
             const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
             hands.setOptions({ maxNumHands: 1, minDetectionConfidence: 0.7 });
             
-            // Сначала подключаем логику распознавания
-            hands.onResults(res => {}); // Пока пустая заглушка
+            hands.onResults(res => {}); 
 
             const cam = new Camera(video, {
                 onFrame: async () => { await hands.send({image: video}); },
                 width: 640, height: 480
             });
-            return cam.start(); // Запускаем камеру ТОЛЬКО после настройки
+            return cam.start(); 
         }
 
         function initApp(lang) {
@@ -118,21 +117,17 @@
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('controls').style.display = 'flex';
             
-            // Камера
             initCamera().catch(() => alert("Камера недоступна"));
 
-            // Слоты
             const sc = document.getElementById('slots-container');
             sc.innerHTML = '';
             for(let i=0; i<8; i++) sc.innerHTML += '<div class="slot"><span></span></div>';
 
-            // Буквы
             const letters = data[lang].l;
             const mid = Math.ceil(letters.length / 2);
             renderRow('top-row', letters.slice(0, mid));
             renderRow('bottom-row', letters.slice(mid));
 
-            // Цифры (возвращаем желтые панели)
             const lp = document.getElementById('left-panel'); lp.innerHTML = '';
             "1234".split('').forEach(n => lp.innerHTML += `<div class="digit-item" onclick="speak('${n}')">${n}</div>`);
             const rp = document.getElementById('right-panel'); rp.innerHTML = '';
