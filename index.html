@@ -3,41 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MEDSPORT R&D - Full Word Reading</title>
+    <title>MEDSPORT R&D - Voice Fixed</title>
     <style>
         :root { --primary: #e94560; --bg: #1a1a2e; --accent: #ffd700; --slot-bg: rgba(255,255,255,0.1); --panel-bg: rgba(255,255,255,0.05); }
         body { margin: 0; background: var(--bg); color: #fff; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; touch-action: none; user-select: none; }
-        
         #start-screen { position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
         .logo { font-size: 70px; font-weight: 900; color: var(--primary); margin-bottom: 40px; letter-spacing: 8px; text-transform: uppercase; }
-        
         .lang-btns { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 40px; }
         .lang-btn { width: 240px; height: 100px; border: 2px solid rgba(255,255,255,0.3); background: var(--panel-bg); cursor: pointer; border-radius: 15px; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
         .lang-btn span { font-size: 24px; font-weight: 600; letter-spacing: 2px; color: #fff; pointer-events: none; }
         .lang-btn.hovered { border-color: var(--primary); background: rgba(233, 69, 96, 0.2); transform: translateY(-5px); }
-
         .settings-bar { display: flex; align-items: center; gap: 40px; background: var(--panel-bg); padding: 25px 50px; border-radius: 60px; border: 1px solid rgba(255,255,255,0.1); }
         .setting-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .setting-item label { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.6; font-weight: bold; }
-        
         input[type=range] { width: 180px; cursor: pointer; accent-color: var(--primary); }
         .voice-btn { width: 65px; height: 65px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; border: 2px solid rgba(255,255,255,0.5); cursor: pointer; }
-        .voice-btn.hovered { border-color: var(--accent); background: #4834d4; }
-
         #v-container { position: absolute; bottom: 10px; left: 10px; width: 40px; height: 30px; opacity: 0.15; z-index: 1001; pointer-events: none; }
         video { width: 100%; height: 100%; transform: scaleX(-1); object-fit: cover; }
         .char-item { position: absolute; width: 75px; height: 75px; background: #30336b; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 38px; color: #fff; box-shadow: 0 8px 16px rgba(0,0,0,0.4); transform: translate(-50%, -50%); border: 3px solid transparent; cursor: grab; z-index: 100; }
         .char-item.hovered { border-color: var(--accent); background: #4834d4; }
-        
         #slots-container { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 12px; width: 95%; justify-content: center; z-index: 50; }
         .slot { width: 75px; height: 100px; background: var(--slot-bg); border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 50px; font-weight: 900; color: #4CAF50; transition: 0.2s; }
         .slot.has-char { border-style: solid; border-color: #4CAF50; background: rgba(76, 175, 80, 0.1); }
-        
         #controls-panel { position: absolute; top: 62%; left: 50%; transform: translate(-50%, -50%); display: none; align-items: center; gap: 40px; z-index: 200; }
-        #read-all-btn { padding: 20px 50px; background: var(--primary); border: none; color: #fff; border-radius: 50px; font-weight: 900; font-size: 24px; cursor: pointer; box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4); }
-        .control-icon { width: 80px; height: 80px; background: #535c68; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; border: 2px solid transparent; cursor: pointer; }
+        #read-all-btn { padding: 20px 50px; background: var(--primary); border: none; color: #fff; border-radius: 50px; font-weight: 900; font-size: 24px; cursor: pointer; }
+        .control-icon { width: 80px; height: 80px; background: #535c68; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; }
         #lang-switch-icon { border-radius: 50%; background: #4834d4; border: 2px solid #fff; }
-
         #cursor { position: absolute; width: 35px; height: 35px; border: 2px solid #fff; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); z-index: 10000; opacity: 0; }
         .dragging { pointer-events: none; z-index: 1000; position: absolute; }
     </style>
@@ -57,10 +48,7 @@
                 <label>SPEECH SPEED: <span id="speed-val">0.8x</span></label>
                 <input type="range" id="global-speed" min="0.3" max="1.0" step="0.1" value="0.8">
             </div>
-            <div class="setting-item">
-                <label>VOICE</label>
-                <div id="global-voice-toggle" class="voice-btn">👩</div>
-            </div>
+            <div class="setting-item"><label>VOICE</label><div class="voice-btn">👩</div></div>
         </div>
     </div>
 
@@ -88,6 +76,12 @@
         let lastPlanetClickTime = 0, speechRate = 0.8;
 
         const synth = window.speechSynthesis;
+        let voices = [];
+
+        // Обновляем список голосов принудительно для Chrome
+        const loadVoices = () => { voices = synth.getVoices(); };
+        loadVoices();
+        if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
 
         const data = {
             'ru': { letters: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), digits: "0123456789".split(''), code: 'ru-RU' },
@@ -98,8 +92,14 @@
 
         function speak(text) {
             if (!text) return;
-            synth.cancel(); // Остановить текущую речь
+            synth.cancel();
             const ut = new SpeechSynthesisUtterance(text);
+            
+            // Умный подбор голоса
+            const targetLang = currentLang.split('-')[0].toLowerCase();
+            const voice = voices.find(v => v.lang.toLowerCase().includes(targetLang)) || voices.find(v => v.default);
+            
+            if (voice) ut.voice = voice;
             ut.lang = currentLang;
             ut.rate = speechRate;
             synth.speak(ut);
@@ -117,18 +117,12 @@
             controlsPanel.style.display = 'flex';
             document.getElementById('read-all-btn').textContent = langKey === 'ru' ? 'ПРОЧИТАТЬ' : (langKey === 'az' ? 'OXUMAQ' : (langKey === 'tr' ? 'OKU' : 'READ ALL'));
             
-            // Разблокировка аудио через "пустое" высказывание
-            speak(""); 
-
-            setupSlots(); 
-            layoutPerimeter(data[langKey]);
-            startCamera(); 
+            speak(" "); // Активация звука кликом
+            setupSlots(); layoutPerimeter(data[langKey]); startCamera(); 
         }
 
         function returnToMenu() {
-            isAppActive = false;
-            startScreen.style.display = 'flex';
-            controlsPanel.style.display = 'none';
+            isAppActive = false; startScreen.style.display = 'flex'; controlsPanel.style.display = 'none';
             perimeter.innerHTML = ''; slotsContainer.innerHTML = '';
         }
 
@@ -137,11 +131,9 @@
         document.getElementById('btn-en').onclick = () => initSystem('en');
         document.getElementById('btn-ru').onclick = () => initSystem('ru');
         document.getElementById('read-all-btn').onclick = () => readFullWord();
-        document.getElementById('trash-can').onclick = () => { speak(""); setupSlots(); };
+        document.getElementById('trash-can').onclick = () => setupSlots();
         document.getElementById('lang-switch-icon').onclick = () => {
-            const now = Date.now();
-            if (now - lastPlanetClickTime < 600) returnToMenu();
-            lastPlanetClickTime = now;
+            const now = Date.now(); if (now - lastPlanetClickTime < 600) returnToMenu(); lastPlanetClickTime = now;
         };
 
         function setupSlots() {
@@ -171,21 +163,14 @@
         }
 
         function startDrag(c) { 
-            isGrab = true; 
-            speak(c); 
-            activeObj = document.createElement('div'); 
-            activeObj.className = 'char-item dragging'; 
-            activeObj.textContent = c; 
+            isGrab = true; speak(c); activeObj = document.createElement('div'); 
+            activeObj.className = 'char-item dragging'; activeObj.textContent = c; 
             document.body.appendChild(activeObj);
-            activeObj.style.left = curX + 'px';
-            activeObj.style.top = curY + 'px';
+            activeObj.style.left = curX + 'px'; activeObj.style.top = curY + 'px';
         }
 
         function readFullWord() {
-            let word = "";
-            document.querySelectorAll('.slot span').forEach(s => {
-                if (s.textContent.trim() !== "") word += s.textContent;
-            });
+            let word = ""; document.querySelectorAll('.slot span').forEach(s => { if (s.textContent.trim() !== "") word += s.textContent; });
             if(word) speak(word); 
         }
 
@@ -204,11 +189,7 @@
                     const r = s.getBoundingClientRect();
                     if (curX > r.left && curX < r.right && curY > r.top && curY < r.bottom) {
                         const span = s.querySelector('span');
-                        if (span.textContent === "") { 
-                            span.textContent = activeObj.textContent; 
-                            s.classList.add('has-char'); 
-                            speak(activeObj.textContent); 
-                        }
+                        if (span.textContent === "") { span.textContent = activeObj.textContent; s.classList.add('has-char'); speak(activeObj.textContent); }
                     }
                 });
                 activeObj.remove();
@@ -237,16 +218,13 @@
 
         const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
         hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.75, minTrackingConfidence: 0.75 });
-        
         hands.onResults(res => {
             if (res.multiHandLandmarks && res.multiHandLandmarks[0]) {
                 const p = res.multiHandLandmarks[0];
                 let mX = Math.max(0, Math.min(1, ((1 - p[9].x) - 0.25) / 0.5)), mY = Math.max(0, Math.min(1, (p[9].y - 0.25) / 0.5));
                 curX += (mX * window.innerWidth - curX) * 0.4; curY += (mY * window.innerHeight - curY) * 0.4;
                 cursor.style.left = curX + 'px'; cursor.style.top = curY + 'px'; cursor.style.opacity = 1;
-                
                 const isFist = p[8].y > p[6].y && p[12].y > p[10].y && p[16].y > p[14].y && p[20].y > p[18].y;
-                
                 if (isFist) {
                     if (!isGrab && lastHovered) {
                         if (lastHovered.id === 'lang-switch-icon') { const now = Date.now(); if (now - lastPlanetClickTime < 600) returnToMenu(); lastPlanetClickTime = now; }
@@ -266,8 +244,7 @@
         function startCamera() {
             if (camStarted) return;
             const cam = new Camera(video, { onFrame: async () => { await hands.send({image: video}); }, width: 640, height: 480 });
-            cam.start();
-            camStarted = true;
+            cam.start(); camStarted = true;
         }
     </script>
 </body>
