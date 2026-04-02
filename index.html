@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="manifest" href="manifest.json">
     <title>MEDSPORT R&D Nature</title>
     <style>
         :root { --primary: #e94560; --bg: #1a1a2e; --slot-bg: rgba(255,255,255,0.05); }
@@ -82,25 +81,28 @@
         async function initCamera() {
             const video = document.getElementById('input_video');
             const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-            hands.setOptions({ maxNumHands: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+            hands.setOptions({ maxNumHands: 1, minDetectionConfidence: 0.8, minTrackingConfidence: 0.8 });
             
-            // ВОССТАНОВЛЕНИЕ ЛОГИКИ ЖЕСТОВ
             hands.onResults((results) => {
                 if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                     const lm = results.multiHandLandmarks[0][8]; // Указательный палец
                     const x = (1 - lm.x) * window.innerWidth;
                     const y = lm.y * window.innerHeight;
 
+                    // Логика захвата жестом
                     if (!isDragging) {
-                        const target = document.elementFromPoint(x, y);
-                        if (target && target.classList.contains('char-item')) {
+                        const els = document.elementsFromPoint(x, y);
+                        const target = els.find(e => e.classList.contains('char-item'));
+                        if (target) {
                             startDrag(x, y, target.textContent);
                         }
                     } else {
                         move(x, y);
-                        const slot = document.elementFromPoint(x, y);
-                        if (slot && slot.classList.contains('slot')) {
-                            endDrag(x, y);
+                        // Проверка попадания в слот
+                        const els = document.elementsFromPoint(x, y);
+                        const slot = els.find(e => e.classList.contains('slot'));
+                        if (slot) {
+                            endDrag(x, y); // Срабатывает автоматическое "отпускание" в слот
                         }
                     }
                 }
@@ -115,8 +117,12 @@
             document.getElementById('read-btn').textContent = data[lang].b;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('controls').style.display = 'flex';
-            synth.speak(new SpeechSynthesisUtterance("")); 
-            initCamera().catch(() => {});
+            
+            // Разблокировка звука
+            const unlock = new SpeechSynthesisUtterance("");
+            synth.speak(unlock);
+
+            initCamera().catch(err => console.error("Camera error:", err));
 
             const sc = document.getElementById('slots-container');
             sc.innerHTML = '';
@@ -147,28 +153,30 @@
             isDragging = true; speak(c);
             activeObj = document.createElement('div');
             activeObj.className = 'char-item dragging'; activeObj.textContent = c;
-            activeObj.style.left = (x - 30) + 'px'; activeObj.style.top = (y - 30) + 'px';
+            activeObj.style.left = (x - 35) + 'px'; activeObj.style.top = (y - 35) + 'px';
             document.body.appendChild(activeObj);
         }
 
         window.onmousemove = (e) => { if(isDragging) move(e.clientX, e.clientY); };
         window.ontouchmove = (e) => { if(isDragging) move(e.touches[0].clientX, e.touches[0].clientY); };
-        function move(x, y) { if(activeObj) { activeObj.style.left = (x - 30) + 'px'; activeObj.style.top = (y - 30) + 'px'; } }
+        function move(x, y) { if(activeObj) { activeObj.style.left = (x - 35) + 'px'; activeObj.style.top = (y - 35) + 'px'; } }
 
         window.onmouseup = (e) => endDrag(e.clientX, e.clientY);
         window.ontouchend = (e) => endDrag(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
 
         function endDrag(x, y) {
             if(!isDragging) return;
-            document.querySelectorAll('.slot').forEach(s => {
-                const r = s.getBoundingClientRect();
-                if(x > r.left && x < r.right && y > r.top && y < r.bottom) {
-                    s.querySelector('span').textContent = activeObj.textContent;
-                    speak(activeObj.textContent);
-                }
-            });
+            const els = document.elementsFromPoint(x, y);
+            const slot = els.find(e => e.classList.contains('slot'));
+            
+            if(slot) {
+                slot.querySelector('span').textContent = activeObj.textContent;
+                speak(activeObj.textContent);
+            }
+            
             if(activeObj) activeObj.remove(); 
             isDragging = false;
+            activeObj = null;
         }
 
         function readAll() {
