@@ -3,102 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
     <title>MEDSPORT R&D</title>
     <style>
-        :root { --primary: #e94560; --bg: #1a1a2e; --accent: #ffd700; --panel: rgba(255,255,255,0.08); }
+        :root { --primary: #e94560; --bg: #1a1a2e; }
         body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; }
         
         /* Экран выбора */
-        #start-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; padding: 20px; }
-        .logo-img { width: 120px; margin-bottom: 20px; border-radius: 15px; }
-        .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 300px; }
-        .l-btn { padding: 20px; background: var(--panel); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #fff; font-weight: bold; text-align: center; }
+        #start-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
+        .logo-img { width: 150px; border-radius: 15px; margin-bottom: 20px; }
+        .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .l-btn { padding: 15px 30px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; color: #fff; cursor: pointer; font-weight: bold; }
 
-        /* Игровой интерфейс */
-        #letters-area { position: absolute; inset: 0; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
-        .row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; pointer-events: auto; }
+        /* Основной контейнер букв */
+        #letters-area { position: absolute; inset: 0; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+        .row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; pointer-events: auto; }
         
-        .char-item { width: 42px; height: 42px; background: #30336b; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 20px; box-shadow: 0 3px 6px rgba(0,0,0,0.3); }
+        /* Стили букв как в оригинале */
+        .char-item { 
+            width: 60px; height: 60px; 
+            background: #30336b; border-radius: 12px; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: 900; font-size: 30px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
+        }
+
+        /* Адаптация под мобильный (только если экран узкий) */
+        @media (max-width: 600px) {
+            .char-item { width: 40px; height: 40px; font-size: 18px; border-radius: 8px; }
+            .row { gap: 5px; }
+            #letters-area { padding: 10px; padding-bottom: 100px; }
+        }
+
+        /* Слоты */
+        #slots-container { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-wrap: wrap; gap: 10px; width: 90%; justify-content: center; }
+        .slot { width: 65px; height: 85px; background: rgba(255,255,255,0.05); border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #4CAF50; }
         
-        /* Слот-контейнер (центр) */
-        #slots-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-wrap: wrap; gap: 5px; width: 95%; justify-content: center; }
-        .slot { width: 40px; height: 55px; background: rgba(255,255,255,0.05); border: 1px dashed rgba(255,255,255,0.3); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #4CAF50; }
-        .slot.has-char { border: 1px solid #4CAF50; background: rgba(76, 175, 80, 0.1); }
+        @media (max-width: 600px) {
+            .slot { width: 40px; height: 55px; font-size: 24px; }
+        }
 
-        /* Панель управления */
-        #controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; }
-        #read-btn { padding: 15px 30px; background: var(--primary); border: none; color: #fff; border-radius: 30px; font-weight: bold; font-size: 18px; box-shadow: 0 4px 10px rgba(233, 69, 96, 0.3); }
-        .circle-btn { width: 50px; height: 50px; background: #535c68; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        /* Управление */
+        #controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 2000; }
+        #read-btn { padding: 15px 40px; background: var(--primary); border: none; color: #fff; border-radius: 40px; font-weight: 900; font-size: 20px; cursor: pointer; }
+        .circle-btn { width: 60px; height: 60px; background: #535c68; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 25px; cursor: pointer; }
 
-        #v-container { position: absolute; top: 10px; right: 10px; width: 80px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); opacity: 0.6; }
+        #v-container { position: absolute; top: 15px; right: 15px; width: 100px; height: 75px; border-radius: 10px; overflow: hidden; border: 1px solid #fff; opacity: 0.5; }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        .dragging { position: absolute; z-index: 1000; pointer-events: none; transform: scale(1.2); opacity: 0.9; }
+        .dragging { position: absolute; z-index: 5000; pointer-events: none; opacity: 0.8; }
     </style>
 </head>
 <body>
-
     <div id="start-screen">
         <img src="logo.jpg" class="logo-img" onerror="this.style.display='none'">
-        <div style="font-size: 24px; font-weight: 900; color: var(--primary); margin-bottom: 25px;">MEDSPORT</div>
+        <div style="font-size: 30px; font-weight: 900; color: var(--primary); margin-bottom: 30px;">MEDSPORT</div>
         <div class="lang-grid">
-            <div class="l-btn" onclick="initApp('az')">AZ</div>
-            <div class="l-btn" onclick="initApp('ru')">RU</div>
-            <div class="l-btn" onclick="initApp('tr')">TR</div>
-            <div class="l-btn" onclick="initApp('en')">EN</div>
+            <button class="l-btn" onclick="initApp('az')">AZƏRBAYCAN</button>
+            <button class="l-btn" onclick="initApp('ru')">РУССКИЙ</button>
         </div>
     </div>
 
     <div id="v-container"><video id="input_video" playsinline></video></div>
-    
     <div id="letters-area">
         <div id="top-row" class="row"></div>
         <div id="bottom-row" class="row"></div>
     </div>
-
     <div id="slots-container"></div>
-    
     <div id="controls" style="display: none;">
         <div class="circle-btn" onclick="location.reload()">🌐</div>
-        <button id="read-btn" onclick="readAll()">OXUMAQ</button>
+        <button id="read-btn" onclick="readAll()">ПРОЧИТАТЬ</button>
         <div class="circle-btn" onclick="clearSlots()">🗑️</div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
-
     <script>
         const data = {
-            'az': { l: "ABCÇDEƏFGĞHXIİJKQLMNOÖPRSŞTUÜVYZ".split(''), c: 'az-AZ' },
-            'ru': { l: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), c: 'ru-RU' },
-            'tr': { l: "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ".split(''), c: 'tr-TR' },
-            'en': { l: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(''), c: 'en-US' }
+            'az': { l: "ABCÇDEƏFGĞHXIİJKQLMNOÖPRSŞTUÜVYZ".split(''), c: 'az-AZ', b: 'OXUMAQ' },
+            'ru': { l: "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ".split(''), c: 'ru-RU', b: 'ПРОЧИТАТЬ' }
         };
-
-        let currentLang = 'az-AZ', activeObj = null, isDragging = false;
+        let currentLang = 'ru-RU', activeObj = null, isDragging = false;
         const synth = window.speechSynthesis;
 
         function initApp(lang) {
             currentLang = data[lang].c;
+            document.getElementById('read-btn').textContent = data[lang].b;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('controls').style.display = 'flex';
-            
-            // Слоты
             const sc = document.getElementById('slots-container');
-            for(let i=0; i<10; i++) sc.innerHTML += '<div class="slot"><span></span></div>';
-
-            // Буквы в два ряда
+            sc.innerHTML = '';
+            for(let i=0; i<8; i++) sc.innerHTML += '<div class="slot"><span></span></div>';
             const letters = data[lang].l;
             const mid = Math.ceil(letters.length / 2);
             renderRow('top-row', letters.slice(0, mid));
             renderRow('bottom-row', letters.slice(mid));
-            
-            speak(lang === 'az' ? "Sistem hazırdır" : "Система готова");
         }
 
         function renderRow(id, chars) {
             const row = document.getElementById(id);
+            row.innerHTML = '';
             chars.forEach(c => {
                 const div = document.createElement('div');
                 div.className = 'char-item';
@@ -115,33 +118,34 @@
             activeObj = document.createElement('div');
             activeObj.className = 'char-item dragging';
             activeObj.textContent = c;
-            activeObj.style.left = x - 20 + 'px';
-            activeObj.style.top = y - 20 + 'px';
+            activeObj.style.left = (x - 30) + 'px';
+            activeObj.style.top = (y - 30) + 'px';
             document.body.appendChild(activeObj);
         }
 
-        window.ontouchmove = (e) => {
-            if(!isDragging) return;
-            activeObj.style.left = e.touches[0].clientX - 20 + 'px';
-            activeObj.style.top = e.touches[0].clientY - 20 + 'px';
-        };
+        window.onmousemove = (e) => { if(isDragging) move(e.clientX, e.clientY); };
+        window.ontouchmove = (e) => { if(isDragging) move(e.touches[0].clientX, e.touches[0].clientY); };
 
-        window.ontouchend = (e) => {
+        function move(x, y) {
+            activeObj.style.left = (x - 30) + 'px';
+            activeObj.style.top = (y - 30) + 'px';
+        }
+
+        window.onmouseup = (e) => endDrag(e.clientX, e.clientY);
+        window.ontouchend = (e) => endDrag(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+
+        function endDrag(x, y) {
             if(!isDragging) return;
-            const x = e.changedTouches[0].clientX;
-            const y = e.changedTouches[0].clientY;
-            
             document.querySelectorAll('.slot').forEach(s => {
                 const r = s.getBoundingClientRect();
                 if(x > r.left && x < r.right && y > r.top && y < r.bottom) {
                     s.querySelector('span').textContent = activeObj.textContent;
-                    s.classList.add('has-char');
                     speak(activeObj.textContent);
                 }
             });
             activeObj.remove();
             isDragging = false;
-        };
+        }
 
         function readAll() {
             let word = "";
@@ -150,10 +154,7 @@
         }
 
         function clearSlots() {
-            document.querySelectorAll('.slot').forEach(s => {
-                s.querySelector('span').textContent = "";
-                s.classList.remove('has-char');
-            });
+            document.querySelectorAll('.slot span').forEach(s => s.textContent = "");
         }
 
         function speak(t) {
@@ -163,7 +164,6 @@
             synth.speak(u);
         }
 
-        // Камера
         const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
         hands.setOptions({ maxNumHands: 1, minDetectionConfidence: 0.7 });
         const cam = new Camera(document.getElementById('input_video'), {
