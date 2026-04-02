@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MEDSPORT R&D Nature</title>
+    <title>MEDSPORT R&D Nature - Fist Control</title>
     <style>
         :root { --primary: #e94560; --bg: #1a1a2e; --slot-bg: rgba(255,255,255,0.05); }
         body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; user-select: none; }
         
         #start-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
-        .logo-text { font-size: 40px; font-weight: 900; color: var(--primary); margin-bottom: 30px; letter-spacing: 2px; }
+        .logo-text { font-size: 40px; font-weight: 900; color: var(--primary); margin-bottom: 30px; }
         .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 90%; max-width: 500px; }
         .l-btn { padding: 25px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: #fff; cursor: pointer; font-weight: bold; font-size: 18px; text-transform: uppercase; }
 
@@ -18,21 +18,12 @@
 
         #perimeter { position: absolute; inset: 0; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
         .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; pointer-events: auto; }
-        
-        .char-item { 
-            width: 65px; height: 65px; background: #30336b; border-radius: 12px; 
-            display: flex; align-items: center; justify-content: center; 
-            font-weight: 900; font-size: 32px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); cursor: grab; 
-        }
+        .char-item { width: 65px; height: 65px; background: #30336b; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 32px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
 
         .side-panel { position: absolute; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; }
         #left-panel { left: 20px; }
         #right-panel { right: 20px; }
-        .digit-item {
-            width: 55px; height: 55px; background: #f0932b; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 26px; color: #fff; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
+        .digit-item { width: 55px; height: 55px; background: #f0932b; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 26px; color: #fff; cursor: pointer; }
 
         #slots-container { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 10px; justify-content: center; }
         .slot { width: 75px; height: 105px; background: var(--slot-bg); border: 2px dashed rgba(255,255,255,0.2); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 50px; color: #4CAF50; font-weight: 900; }
@@ -60,6 +51,7 @@
     <div id="left-panel" class="side-panel"></div>
     <div id="right-panel" class="side-panel"></div>
     <div id="slots-container"></div>
+    
     <div id="controls" style="display: none;">
         <div class="circle-btn" onclick="location.reload()">🌐</div>
         <button id="read-btn" onclick="readAll()"></button>
@@ -67,7 +59,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 
     <script>
@@ -84,42 +75,37 @@
             const video = document.getElementById('input_video');
             const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
             
-            hands.setOptions({
-                maxNumHands: 1,
-                modelComplexity: 1,
-                minDetectionConfidence: 0.7,
-                minTrackingConfidence: 0.7
-            });
+            hands.setOptions({ maxNumHands: 1, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
             
             hands.onResults((results) => {
                 if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                    const landmarks = results.multiHandLandmarks[0];
-                    const indexFinger = landmarks[8]; // Кончик указательного пальца
+                    const lm = results.multiHandLandmarks[0];
+                    
+                    // Центр ладони (для перемещения)
+                    const x = (1 - lm[9].x) * window.innerWidth;
+                    const y = lm[9].y * window.innerHeight;
 
-                    // Инвертируем X, так как видео зеркальное
-                    const x = (1 - indexFinger.x) * window.innerWidth;
-                    const y = indexFinger.y * window.innerHeight;
+                    // ЛОГИКА КУЛАКА: Проверяем, что кончики 4 пальцев ниже их вторых суставов
+                    const isFist = lm[8].y > lm[6].y && lm[12].y > lm[10].y && lm[16].y > lm[14].y && lm[20].y > lm[18].y;
 
-                    if (!isDragging) {
-                        const target = document.elementFromPoint(x, y);
-                        if (target && target.classList.contains('char-item')) {
-                            startDrag(x, y, target.textContent);
+                    if (isFist) {
+                        if (!isDragging) {
+                            const target = document.elementFromPoint(x, y);
+                            if (target && target.classList.contains('char-item')) {
+                                startDrag(x, y, target.textContent);
+                            }
+                        } else {
+                            move(x, y);
                         }
                     } else {
-                        move(x, y);
-                        // Проверка пересечения со слотами в реальном времени
-                        const overElement = document.elementFromPoint(x, y);
-                        if (overElement && overElement.classList.contains('slot')) {
+                        if (isDragging) {
                             endDrag(x, y);
                         }
                     }
                 }
             });
 
-            const cam = new Camera(video, {
-                onFrame: async () => { await hands.send({image: video}); },
-                width: 640, height: 480
-            });
+            const cam = new Camera(video, { onFrame: async () => { await hands.send({image: video}); }, width: 640, height: 480 });
             return cam.start();
         }
 
@@ -128,10 +114,8 @@
             document.getElementById('read-btn').textContent = data[lang].b;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('controls').style.display = 'flex';
-            
-            synth.speak(new SpeechSynthesisUtterance("")); // Разблокировка голоса
-
-            initCamera().catch(err => alert("Ошибка камеры: " + err));
+            synth.speak(new SpeechSynthesisUtterance("")); 
+            initCamera().catch(err => console.error(err));
 
             const sc = document.getElementById('slots-container');
             sc.innerHTML = '';
@@ -141,11 +125,8 @@
             renderRow('bottom-row', data[lang].l2);
 
             const lp = document.getElementById('left-panel');
-            lp.innerHTML = '';
             "01234".split('').forEach(n => lp.innerHTML += `<div class="digit-item" onclick="speak('${n}')">${n}</div>`);
-            
             const rp = document.getElementById('right-panel');
-            rp.innerHTML = '';
             "56789".split('').forEach(n => rp.innerHTML += `<div class="digit-item" onclick="speak('${n}')">${n}</div>`);
         }
 
@@ -154,68 +135,43 @@
             chars.forEach(c => {
                 const div = document.createElement('div');
                 div.className = 'char-item'; div.textContent = c;
-                div.onmousedown = (e) => startDrag(e.clientX, e.clientY, c);
-                div.ontouchstart = (e) => { e.preventDefault(); startDrag(e.touches[0].clientX, e.touches[0].clientY, c); };
                 row.appendChild(div);
             });
         }
 
         function startDrag(x, y, c) {
-            if (isDragging) return;
-            isDragging = true; 
-            speak(c);
+            isDragging = true; speak(c);
             activeObj = document.createElement('div');
             activeObj.className = 'char-item dragging'; 
             activeObj.textContent = c;
-            activeObj.style.left = (x - 32) + 'px'; 
-            activeObj.style.top = (y - 32) + 'px';
+            activeObj.style.left = (x - 32) + 'px'; activeObj.style.top = (y - 32) + 'px';
             document.body.appendChild(activeObj);
         }
 
-        function move(x, y) { 
-            if(activeObj) { 
-                activeObj.style.left = (x - 32) + 'px'; 
-                activeObj.style.top = (y - 32) + 'px'; 
-            } 
-        }
-
-        // Поддержка мыши и тача тоже остается
-        window.onmousemove = (e) => { if(isDragging) move(e.clientX, e.clientY); };
-        window.ontouchmove = (e) => { if(isDragging) move(e.touches[0].clientX, e.touches[0].clientY); };
-        window.onmouseup = (e) => endDrag(e.clientX, e.clientY);
-        window.ontouchend = (e) => endDrag(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+        function move(x, y) { if(activeObj) { activeObj.style.left = (x - 32) + 'px'; activeObj.style.top = (y - 32) + 'px'; } }
 
         function endDrag(x, y) {
             if(!isDragging) return;
-            const targetSlot = document.elementFromPoint(x, y);
-            
-            if(targetSlot && (targetSlot.classList.contains('slot') || targetSlot.parentElement.classList.contains('slot'))) {
-                const slot = targetSlot.classList.contains('slot') ? targetSlot : targetSlot.parentElement;
+            const target = document.elementFromPoint(x, y);
+            if(target && (target.classList.contains('slot') || target.parentElement.classList.contains('slot'))) {
+                const slot = target.classList.contains('slot') ? target : target.parentElement;
                 slot.querySelector('span').textContent = activeObj.textContent;
                 speak(activeObj.textContent);
             }
-            
             if(activeObj) activeObj.remove(); 
             isDragging = false;
             activeObj = null;
         }
 
         function readAll() {
-            let word = ""; 
-            document.querySelectorAll('.slot span').forEach(s => word += s.textContent);
+            let word = ""; document.querySelectorAll('.slot span').forEach(s => word += s.textContent);
             if(word) speak(word);
         }
 
-        function clearSlots() { 
-            document.querySelectorAll('.slot span').forEach(s => s.textContent = ""); 
-        }
+        function clearSlots() { document.querySelectorAll('.slot span').forEach(s => s.textContent = ""); }
 
         function speak(t) { 
-            synth.cancel(); 
-            const u = new SpeechSynthesisUtterance(t); 
-            u.lang = currentLang; 
-            u.rate = 0.9; 
-            synth.speak(u); 
+            synth.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = currentLang; u.rate = 0.9; synth.speak(u); 
         }
     </script>
 </body>
