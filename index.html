@@ -67,7 +67,9 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
     <script>
         const data = {
             'az': { l: "ABCÇDEƏFGĞHXIİJK".split(''), l2: "QLMNOÖPRSŞTUÜVYZ".split(''), c: 'az-AZ', b: 'OXUMAQ' },
@@ -81,34 +83,43 @@
         async function initCamera() {
             const video = document.getElementById('input_video');
             const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
-            hands.setOptions({ maxNumHands: 1, minDetectionConfidence: 0.8, minTrackingConfidence: 0.8 });
+            
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.7,
+                minTrackingConfidence: 0.7
+            });
             
             hands.onResults((results) => {
                 if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                    const lm = results.multiHandLandmarks[0][8]; // Указательный палец
-                    const x = (1 - lm.x) * window.innerWidth;
-                    const y = lm.y * window.innerHeight;
+                    const landmarks = results.multiHandLandmarks[0];
+                    const indexFinger = landmarks[8]; // Кончик указательного пальца
 
-                    // Логика захвата жестом
+                    // Инвертируем X, так как видео зеркальное
+                    const x = (1 - indexFinger.x) * window.innerWidth;
+                    const y = indexFinger.y * window.innerHeight;
+
                     if (!isDragging) {
-                        const els = document.elementsFromPoint(x, y);
-                        const target = els.find(e => e.classList.contains('char-item'));
-                        if (target) {
+                        const target = document.elementFromPoint(x, y);
+                        if (target && target.classList.contains('char-item')) {
                             startDrag(x, y, target.textContent);
                         }
                     } else {
                         move(x, y);
-                        // Проверка попадания в слот
-                        const els = document.elementsFromPoint(x, y);
-                        const slot = els.find(e => e.classList.contains('slot'));
-                        if (slot) {
-                            endDrag(x, y); // Срабатывает автоматическое "отпускание" в слот
+                        // Проверка пересечения со слотами в реальном времени
+                        const overElement = document.elementFromPoint(x, y);
+                        if (overElement && overElement.classList.contains('slot')) {
+                            endDrag(x, y);
                         }
                     }
                 }
             });
 
-            const cam = new Camera(video, { onFrame: async () => { await hands.send({image: video}); }, width: 640, height: 480 });
+            const cam = new Camera(video, {
+                onFrame: async () => { await hands.send({image: video}); },
+                width: 640, height: 480
+            });
             return cam.start();
         }
 
@@ -118,11 +129,9 @@
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('controls').style.display = 'flex';
             
-            // Разблокировка звука
-            const unlock = new SpeechSynthesisUtterance("");
-            synth.speak(unlock);
+            synth.speak(new SpeechSynthesisUtterance("")); // Разблокировка голоса
 
-            initCamera().catch(err => console.error("Camera error:", err));
+            initCamera().catch(err => alert("Ошибка камеры: " + err));
 
             const sc = document.getElementById('slots-container');
             sc.innerHTML = '';
@@ -132,8 +141,11 @@
             renderRow('bottom-row', data[lang].l2);
 
             const lp = document.getElementById('left-panel');
+            lp.innerHTML = '';
             "01234".split('').forEach(n => lp.innerHTML += `<div class="digit-item" onclick="speak('${n}')">${n}</div>`);
+            
             const rp = document.getElementById('right-panel');
+            rp.innerHTML = '';
             "56789".split('').forEach(n => rp.innerHTML += `<div class="digit-item" onclick="speak('${n}')">${n}</div>`);
         }
 
@@ -150,26 +162,35 @@
 
         function startDrag(x, y, c) {
             if (isDragging) return;
-            isDragging = true; speak(c);
+            isDragging = true; 
+            speak(c);
             activeObj = document.createElement('div');
-            activeObj.className = 'char-item dragging'; activeObj.textContent = c;
-            activeObj.style.left = (x - 35) + 'px'; activeObj.style.top = (y - 35) + 'px';
+            activeObj.className = 'char-item dragging'; 
+            activeObj.textContent = c;
+            activeObj.style.left = (x - 32) + 'px'; 
+            activeObj.style.top = (y - 32) + 'px';
             document.body.appendChild(activeObj);
         }
 
+        function move(x, y) { 
+            if(activeObj) { 
+                activeObj.style.left = (x - 32) + 'px'; 
+                activeObj.style.top = (y - 32) + 'px'; 
+            } 
+        }
+
+        // Поддержка мыши и тача тоже остается
         window.onmousemove = (e) => { if(isDragging) move(e.clientX, e.clientY); };
         window.ontouchmove = (e) => { if(isDragging) move(e.touches[0].clientX, e.touches[0].clientY); };
-        function move(x, y) { if(activeObj) { activeObj.style.left = (x - 35) + 'px'; activeObj.style.top = (y - 35) + 'px'; } }
-
         window.onmouseup = (e) => endDrag(e.clientX, e.clientY);
         window.ontouchend = (e) => endDrag(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
 
         function endDrag(x, y) {
             if(!isDragging) return;
-            const els = document.elementsFromPoint(x, y);
-            const slot = els.find(e => e.classList.contains('slot'));
+            const targetSlot = document.elementFromPoint(x, y);
             
-            if(slot) {
+            if(targetSlot && (targetSlot.classList.contains('slot') || targetSlot.parentElement.classList.contains('slot'))) {
+                const slot = targetSlot.classList.contains('slot') ? targetSlot : targetSlot.parentElement;
                 slot.querySelector('span').textContent = activeObj.textContent;
                 speak(activeObj.textContent);
             }
@@ -180,14 +201,21 @@
         }
 
         function readAll() {
-            let word = ""; document.querySelectorAll('.slot span').forEach(s => word += s.textContent);
+            let word = ""; 
+            document.querySelectorAll('.slot span').forEach(s => word += s.textContent);
             if(word) speak(word);
         }
 
-        function clearSlots() { document.querySelectorAll('.slot span').forEach(s => s.textContent = ""); }
+        function clearSlots() { 
+            document.querySelectorAll('.slot span').forEach(s => s.textContent = ""); 
+        }
 
         function speak(t) { 
-            synth.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = currentLang; u.rate = 0.9; synth.speak(u); 
+            synth.cancel(); 
+            const u = new SpeechSynthesisUtterance(t); 
+            u.lang = currentLang; 
+            u.rate = 0.9; 
+            synth.speak(u); 
         }
     </script>
 </body>
