@@ -3,82 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="manifest.json">
     <title>MEDSPORT R&D Nature</title>
     <style>
         :root { --primary: #e94560; --bg: #1a1a2e; --slot-bg: rgba(255,255,255,0.05); }
         body { margin: 0; background: var(--bg); color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; user-select: none; }
         
-        /* Экран выбора языка - ВОССТАНОВЛЕНО 4 КНОПКИ */
+        /* ЭКРАН ВЫБОРА - ПОЛНЫЕ НАЗВАНИЯ */
         #start-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
-        .logo-img { width: clamp(100px, 15vw, 180px); border-radius: 20px; margin-bottom: 20px; }
-        .logo-text { font-size: clamp(24px, 5vw, 40px); font-weight: 900; color: var(--primary); margin-bottom: 30px; letter-spacing: 2px; }
-        .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 80%; max-width: 400px; }
-        .l-btn { padding: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: #fff; cursor: pointer; font-weight: bold; font-size: 20px; transition: 0.3s; text-align: center; }
-        .l-btn:hover { background: var(--primary); }
+        .logo-text { font-size: 40px; font-weight: 900; color: var(--primary); margin-bottom: 30px; letter-spacing: 2px; }
+        .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 90%; max-width: 500px; }
+        .l-btn { padding: 25px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: #fff; cursor: pointer; font-weight: bold; font-size: 18px; text-transform: uppercase; }
 
-        /* Видео контейнер */
-        #v-container { position: absolute; top: 10px; right: 10px; width: clamp(80px, 15vw, 150px); height: clamp(60px, 12vw, 110px); border-radius: 12px; overflow: hidden; border: 2px solid #fff; opacity: 0.6; z-index: 1000; }
+        #v-container { position: absolute; top: 10px; right: 10px; width: 140px; height: 100px; border-radius: 12px; overflow: hidden; border: 2px solid #fff; opacity: 0.6; z-index: 1000; }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
-        /* Буквы - КРУПНЫЙ РАЗМЕР */
         #perimeter { position: absolute; inset: 0; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
-        .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; pointer-events: auto; }
+        .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; pointer-events: auto; }
+        
         .char-item { 
-            width: clamp(45px, 6vw, 75px); height: clamp(45px, 6vw, 75px); 
-            background: #30336b; border-radius: 12px; 
+            width: 65px; height: 65px; background: #30336b; border-radius: 12px; 
             display: flex; align-items: center; justify-content: center; 
-            font-weight: 900; font-size: clamp(22px, 3vw, 38px); 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4); cursor: grab; 
+            font-weight: 900; font-size: 32px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); cursor: grab; 
         }
 
-        /* Боковые панели с цифрами */
-        .side-panel { position: absolute; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 15px; }
+        /* КВАДРАТНЫЕ ЦИФРЫ 0-9 */
+        .side-panel { position: absolute; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; }
         #left-panel { left: 20px; }
         #right-panel { right: 20px; }
         .digit-item {
-            width: 55px; height: 55px;
-            background: rgba(255, 215, 0, 0.1); border: 2px solid #ffd700; border-radius: 50%;
+            width: 55px; height: 55px; background: #f0932b; border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            font-weight: bold; font-size: 24px; color: #ffd700; cursor: pointer;
+            font-weight: bold; font-size: 26px; color: #fff; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* Слоты */
-        #slots-container { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 12px; justify-content: center; }
-        .slot { 
-            width: clamp(50px, 7vw, 85px); height: clamp(70px, 10vh, 115px); 
-            background: var(--slot-bg); border: 2px dashed rgba(255,255,255,0.2); border-radius: 15px; 
-            display: flex; align-items: center; justify-content: center; 
-            font-size: clamp(30px, 5vw, 55px); color: #4CAF50; font-weight: 900;
-        }
+        #slots-container { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 10px; justify-content: center; }
+        .slot { width: 75px; height: 105px; background: var(--slot-bg); border: 2px dashed rgba(255,255,255,0.2); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 50px; color: #4CAF50; font-weight: 900; }
         
-        /* Кнопки управления */
-        #controls { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 30px; z-index: 2000; }
-        #read-btn { padding: 15px 50px; background: var(--primary); border: none; color: #fff; border-radius: 50px; font-weight: 900; font-size: 24px; cursor: pointer; box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4); }
-        .circle-btn { width: 65px; height: 65px; background: #535c68; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; cursor: pointer; }
+        #controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 25px; z-index: 2000; }
+        #read-btn { padding: 15px 60px; background: var(--primary); border: none; color: #fff; border-radius: 50px; font-weight: 900; font-size: 24px; cursor: pointer; }
+        .circle-btn { width: 60px; height: 60px; background: #535c68; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
 
         .dragging { position: absolute; z-index: 5000; pointer-events: none; opacity: 0.8; transform: scale(1.1); }
     </style>
 </head>
 <body>
     <div id="start-screen">
-        <img src="logo.jpg" class="logo-img" onerror="this.style.display='none'">
         <div class="logo-text">MEDSPORT</div>
         <div class="lang-grid">
-            <button class="l-btn" onclick="initApp('az')">AZ</button>
-            <button class="l-btn" onclick="initApp('ru')">RU</button>
-            <button class="l-btn" onclick="initApp('tr')">TR</button>
-            <button class="l-btn" onclick="initApp('en')">EN</button>
+            <button class="l-btn" onclick="initApp('az')">AZƏRBAYCAN</button>
+            <button class="l-btn" onclick="initApp('ru')">РУССКИЙ</button>
+            <button class="l-btn" onclick="initApp('tr')">TÜRKÇE</button>
+            <button class="l-btn" onclick="initApp('en')">ENGLISH</button>
         </div>
     </div>
 
     <div id="v-container"><video id="input_video" playsinline></video></div>
-    
-    <div id="perimeter">
-        <div id="top-row" class="row"></div>
-        <div id="bottom-row" class="row"></div>
-    </div>
+    <div id="perimeter"><div id="top-row" class="row"></div><div id="bottom-row" class="row"></div></div>
     
     <div id="left-panel" class="side-panel"></div>
     <div id="right-panel" class="side-panel"></div>
@@ -106,12 +87,7 @@
             const video = document.getElementById('input_video');
             const hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
             hands.setOptions({ maxNumHands: 1, minDetectionConfidence: 0.7 });
-            hands.onResults(() => {});
-
-            const cam = new Camera(video, {
-                onFrame: async () => { await hands.send({image: video}); },
-                width: 640, height: 480
-            });
+            const cam = new Camera(video, { onFrame: async () => { await hands.send({image: video}); }, width: 640, height: 480 });
             return cam.start();
         }
 
@@ -120,12 +96,8 @@
             document.getElementById('read-btn').textContent = data[lang].b;
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('controls').style.display = 'flex';
-            
-            // Разблокировка звука
-            const unlock = new SpeechSynthesisUtterance("");
-            synth.speak(unlock);
-
-            initCamera().catch(() => console.warn("Camera error"));
+            synth.speak(new SpeechSynthesisUtterance("")); 
+            initCamera().catch(() => {});
 
             const sc = document.getElementById('slots-container');
             sc.innerHTML = '';
@@ -134,18 +106,17 @@
             renderRow('top-row', data[lang].l);
             renderRow('bottom-row', data[lang].l2);
 
-            const lp = document.getElementById('left-panel'); lp.innerHTML = '';
-            "1234".split('').forEach(n => lp.innerHTML += `<div class="digit-item" onclick="speak('${n}')">${n}</div>`);
-            const rp = document.getElementById('right-panel'); rp.innerHTML = '';
-            "5678".split('').forEach(n => rp.innerHTML += `<div class="digit-item" onclick="speak('${n}')">${n}</div>`);
+            const lp = document.getElementById('left-panel');
+            "01234".split('').forEach(n => lp.innerHTML += `<div class="digit-item" onclick="speak('${n}')">${n}</div>`);
+            const rp = document.getElementById('right-panel');
+            "56789".split('').forEach(n => rp.innerHTML += `<div class="digit-item" onclick="speak('${n}')">${n}</div>`);
         }
 
         function renderRow(id, chars) {
             const row = document.getElementById(id); row.innerHTML = '';
             chars.forEach(c => {
                 const div = document.createElement('div');
-                div.className = 'char-item';
-                div.textContent = c;
+                div.className = 'char-item'; div.textContent = c;
                 div.onmousedown = (e) => startDrag(e.clientX, e.clientY, c);
                 div.ontouchstart = (e) => { e.preventDefault(); startDrag(e.touches[0].clientX, e.touches[0].clientY, c); };
                 row.appendChild(div);
@@ -153,11 +124,9 @@
         }
 
         function startDrag(x, y, c) {
-            isDragging = true;
-            speak(c);
+            isDragging = true; speak(c);
             activeObj = document.createElement('div');
-            activeObj.className = 'char-item dragging';
-            activeObj.textContent = c;
+            activeObj.className = 'char-item dragging'; activeObj.textContent = c;
             activeObj.style.left = (x - 30) + 'px'; activeObj.style.top = (y - 30) + 'px';
             document.body.appendChild(activeObj);
         }
@@ -190,11 +159,7 @@
         function clearSlots() { document.querySelectorAll('.slot span').forEach(s => s.textContent = ""); }
 
         function speak(t) { 
-            synth.cancel(); 
-            const u = new SpeechSynthesisUtterance(t); 
-            u.lang = currentLang; 
-            u.rate = 0.9;
-            synth.speak(u); 
+            synth.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = currentLang; u.rate = 0.9; synth.speak(u); 
         }
     </script>
 </body>
